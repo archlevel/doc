@@ -1,0 +1,181 @@
+### SELECT语句关键字的定义顺序
+
+```
+SELECT DISTINCT <select_list>
+FROM <left_table>
+<join_type> JOIN <right_table>
+ON <join_condition>
+WHERE <where_condition>
+GROUP BY <group_by_list>
+HAVING <having_condition>
+ORDER BY <order_by_condition>
+LIMIT <limit_number>
+```
+### SELECT语句关键字的执行顺序
+
+```
+(7)     SELECT 
+(8)     DISTINCT <select_list>
+(1)     FROM <left_table>
+(3)     <join_type> JOIN <right_table>
+(2)     ON <join_condition>
+(4)     WHERE <where_condition>
+(5)     GROUP BY <group_by_list>
+(6)     HAVING <having_condition>
+(9)     ORDER BY <order_by_condition>
+(10)    LIMIT <limit_number>
+```
+
+### 准备表和数据
++  新建一个测试数据库TestDB
+```
+create database TestDB;
+```
++ 创建测试表table1和table2；
+```
+CREATE TABLE table1
+ (
+     customer_id VARCHAR(10) NOT NULL,
+     city VARCHAR(10) NOT NULL,
+     PRIMARY KEY(customer_id)
+ )ENGINE=INNODB DEFAULT CHARSET=UTF8;
+
+ CREATE TABLE table2
+ (
+     order_id INT NOT NULL auto_increment,
+     customer_id VARCHAR(10),
+     PRIMARY KEY(order_id)
+ )ENGINE=INNODB DEFAULT CHARSET=UTF8;
+```
++ 插入测试数据；
+```
+INSERT INTO table1(customer_id,city) VALUES('163','hangzhou');
+ INSERT INTO table1(customer_id,city) VALUES('9you','shanghai');
+ INSERT INTO table1(customer_id,city) VALUES('tx','hangzhou');
+ INSERT INTO table1(customer_id,city) VALUES('baidu','hangzhou');
+
+ INSERT INTO table2(customer_id) VALUES('163');
+ INSERT INTO table2(customer_id) VALUES('163');
+ INSERT INTO table2(customer_id) VALUES('9you');
+ INSERT INTO table2(customer_id) VALUES('9you');
+ INSERT INTO table2(customer_id) VALUES('9you');
+ INSERT INTO table2(customer_id) VALUES('tx');
+ INSERT INTO table2(customer_id) VALUES(NULL);
+```
++ 准备工作做完以后，table1和table2看起来应该像下面这样：
+```
+mysql> select * from table1;
+ +-------------+----------+
+ | customer_id | city     |
+ +-------------+----------+
+ | 163         | hangzhou |
+ | 9you        | shanghai |
+ | baidu       | hangzhou |
+ | tx          | hangzhou |
+ +-------------+----------+
+ 4 rows in set (0.00 sec)
+
+ mysql> select * from table2;
+ +----------+-------------+
+ | order_id | customer_id |
+ +----------+-------------+
+ |        1 | 163         |
+ |        2 | 163         |
+ |        3 | 9you        |
+ |        4 | 9you        |
+ |        5 | 9you        |
+ |        6 | tx          |
+ |        7 | NULL        |
+ +----------+-------------+
+ 7 rows in set (0.00 sec)
+```
++ 准备SQL逻辑查询测试语句
+```
+ #查询来自杭州，并且订单数少于2的客户。
+ SELECT a.customer_id, COUNT(b.order_id) as total_orders
+ FROM table1 AS a
+ LEFT JOIN table2 AS b
+ ON a.customer_id = b.customer_id
+ WHERE a.city = 'hangzhou'
+ GROUP BY a.customer_id
+ HAVING count(b.order_id) < 2
+ ORDER BY total_orders DESC;
+```
++ 执行顺序分析
+```
+在这些SQL语句的执行过程中，都会产生一个虚拟表，用来保存SQL语句的执行结果（这是重点），我现在就来跟踪这个虚拟表的变化，得到最终的查询结果的过程，来分析整个SQL逻辑查询的执行顺序和过程。
+
+执行FROM语句
+
+第一步，执行FROM语句。我们首先需要知道最开始从哪个表开始的，这就是FROM告诉我们的。现在有了<left_table>和<right_table>两个表，我们到底从哪个表开始，还是从两个表进行某种联系以后再开始呢？它们之间如何产生联系呢？——笛卡尔积
+
+关于什么是笛卡尔积，请自行Google补脑。经过FROM语句对两个表执行笛卡尔积，会得到一个虚拟表，暂且叫VT1（vitual table 1），内容如下：
+
++-------------+----------+----------+-------------+
+| customer_id | city     | order_id | customer_id |
++-------------+----------+----------+-------------+
+| 163         | hangzhou |        1 | 163         |
+| 9you        | shanghai |        1 | 163         |
+| baidu       | hangzhou |        1 | 163         |
+| tx          | hangzhou |        1 | 163         |
+| 163         | hangzhou |        2 | 163         |
+| 9you        | shanghai |        2 | 163         |
+| baidu       | hangzhou |        2 | 163         |
+| tx          | hangzhou |        2 | 163         |
+| 163         | hangzhou |        3 | 9you        |
+| 9you        | shanghai |        3 | 9you        |
+| baidu       | hangzhou |        3 | 9you        |
+| tx          | hangzhou |        3 | 9you        |
+| 163         | hangzhou |        4 | 9you        |
+| 9you        | shanghai |        4 | 9you        |
+| baidu       | hangzhou |        4 | 9you        |
+| tx          | hangzhou |        4 | 9you        |
+| 163         | hangzhou |        5 | 9you        |
+| 9you        | shanghai |        5 | 9you        |
+| baidu       | hangzhou |        5 | 9you        |
+| tx          | hangzhou |        5 | 9you        |
+| 163         | hangzhou |        6 | tx          |
+| 9you        | shanghai |        6 | tx          |
+| baidu       | hangzhou |        6 | tx          |
+| tx          | hangzhou |        6 | tx          |
+| 163         | hangzhou |        7 | NULL        |
+| 9you        | shanghai |        7 | NULL        |
+| baidu       | hangzhou |        7 | NULL        |
+| tx          | hangzhou |        7 | NULL        |
++-------------+----------+----------+-------------+
+总共有28（table1的记录条数 * table2的记录条数）条记录。这就是VT1的结果，接下来的操作就在VT1的基础上进行。
+```
++ 执行ON过滤
+```
+执行完笛卡尔积以后，接着就进行ON a.customer_id = b.customer_id条件过滤，根据ON中指定的条件，去掉那些不符合条件的数据，得到VT2表，内容如下：
++-------------+----------+----------+-------------+
+| customer_id | city     | order_id | customer_id |
++-------------+----------+----------+-------------+
+| 163         | hangzhou |        1 | 163         |
+| 163         | hangzhou |        2 | 163         |
+| 9you        | shanghai |        3 | 9you        |
+| 9you        | shanghai |        4 | 9you        |
+| 9you        | shanghai |        5 | 9you        |
+| tx          | hangzhou |        6 | tx          |
++-------------+----------+----------+-------------+
+VT2就是经过ON条件筛选以后得到的有用数据，而接下来的操作将在VT2的基础上继续进行。
+```
++ 添加外部行
+```
+这一步只有在连接类型为OUTER JOIN时才发生，如LEFT OUTER JOIN、RIGHT OUTER JOIN和FULL OUTER JOIN。在大多数的时候，我们都是会省略掉OUTER关键字的，但OUTER表示的就是外部行的概念。
+
+LEFT OUTER JOIN把左表记为保留表，得到的结果为：
++-------------+----------+----------+-------------+
+| customer_id | city     | order_id | customer_id |
++-------------+----------+----------+-------------+
+| 163         | hangzhou |        1 | 163         |
+| 163         | hangzhou |        2 | 163         |
+| 9you        | shanghai |        3 | 9you        |
+| 9you        | shanghai |        4 | 9you        |
+| 9you        | shanghai |        5 | 9you        |
+| tx          | hangzhou |        6 | tx          |
+| baidu       | hangzhou |     NULL | NULL        |
++-------------+----------+----------+-------------+
+```
+
+
