@@ -1,4 +1,4 @@
-### SELECT语句关键字的定义顺序
+一:SELECT语句关键字的定义顺序
 
 ```
 SELECT DISTINCT <select_list>
@@ -11,7 +11,8 @@ HAVING <having_condition>
 ORDER BY <order_by_condition>
 LIMIT <limit_number>
 ```
-### SELECT语句关键字的执行顺序
+
+二: SELECT语句关键字的执行顺序
 
 ```
 (7)     SELECT 
@@ -26,12 +27,16 @@ LIMIT <limit_number>
 (10)    LIMIT <limit_number>
 ```
 
-### 准备表和数据
+三: 准备表和数据
+
 +  新建一个测试数据库TestDB
+
 ```
 create database TestDB;
 ```
+
 + 创建测试表table1和table2；
+
 ```
 CREATE TABLE table1
  (
@@ -47,7 +52,9 @@ CREATE TABLE table1
      PRIMARY KEY(order_id)
  )ENGINE=INNODB DEFAULT CHARSET=UTF8;
 ```
+
 + 插入测试数据；
+
 ```
 INSERT INTO table1(customer_id,city) VALUES('163','hangzhou');
  INSERT INTO table1(customer_id,city) VALUES('9you','shanghai');
@@ -62,7 +69,9 @@ INSERT INTO table1(customer_id,city) VALUES('163','hangzhou');
  INSERT INTO table2(customer_id) VALUES('tx');
  INSERT INTO table2(customer_id) VALUES(NULL);
 ```
+
 + 准备工作做完以后，table1和table2看起来应该像下面这样：
+
 ```
 mysql> select * from table1;
  +-------------+----------+
@@ -89,7 +98,9 @@ mysql> select * from table1;
  +----------+-------------+
  7 rows in set (0.00 sec)
 ```
+
 + 准备SQL逻辑查询测试语句
+
 ```
  #查询来自杭州，并且订单数少于2的客户。
  SELECT a.customer_id, COUNT(b.order_id) as total_orders
@@ -101,7 +112,9 @@ mysql> select * from table1;
  HAVING count(b.order_id) < 2
  ORDER BY total_orders DESC;
 ```
+
 + 执行顺序分析
+
 ```
 在这些SQL语句的执行过程中，都会产生一个虚拟表，用来保存SQL语句的执行结果（这是重点），我现在就来跟踪这个虚拟表的变化，得到最终的查询结果的过程，来分析整个SQL逻辑查询的执行顺序和过程。
 
@@ -145,7 +158,9 @@ mysql> select * from table1;
 +-------------+----------+----------+-------------+
 总共有28（table1的记录条数 * table2的记录条数）条记录。这就是VT1的结果，接下来的操作就在VT1的基础上进行。
 ```
+
 + 执行ON过滤
+
 ```
 执行完笛卡尔积以后，接着就进行ON a.customer_id = b.customer_id条件过滤，根据ON中指定的条件，去掉那些不符合条件的数据，得到VT2表，内容如下：
 +-------------+----------+----------+-------------+
@@ -160,7 +175,9 @@ mysql> select * from table1;
 +-------------+----------+----------+-------------+
 VT2就是经过ON条件筛选以后得到的有用数据，而接下来的操作将在VT2的基础上继续进行。
 ```
+
 + 添加外部行
+
 ```
 这一步只有在连接类型为OUTER JOIN时才发生，如LEFT OUTER JOIN、RIGHT OUTER JOIN和FULL OUTER JOIN。在大多数的时候，我们都是会省略掉OUTER关键字的，但OUTER表示的就是外部行的概念。
 
