@@ -16,7 +16,9 @@ charles 安装：
 
 + 5，打开 前往-->实用工具-->钥匙串访问：导入上面保存的charles证书到系统根证书并调整为<<始终信任>>；
 
-+ 6，代理设置：proxy-->proxy setting; port:8888,enable transparent http proxying=true
++ 6，代理设置
+  + proxy-->proxy setting; port:8888,enable transparent http proxying=true
+  + proxy--> SSL proxy setting; enable SSL proxying=true；add host：*
 
 + 手机端设置：【手机和pc机器必须是同一无线网络】
 
@@ -27,7 +29,8 @@ charles 安装：
 + https 代理设置：
 
 + 1，打开手机端Safari，访问chls.pro/ssl;弹出证书下载提示，按照提示操作即可；
-+ 2，打开手机通用-->关于本机-->证书信任设置-->信任charles相关证书；
-+ 3，设置代理ip及端口；
-+ 4，愉快的抓包。。。
++ 2，安装手机端证书：通用-->描述文件-->安装证书
++ 3，信任手机端证书：通用-->关于本机-->证书信任设置-->信任charles相关证书；【】
++ 4，设置代理ip及端口；
++ 5，愉快的抓包。。。
 
