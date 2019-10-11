@@ -75,4 +75,4 @@ metadata:
 
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
 
-
+参考资料：https://www.cnblogs.com/shengulong/p/10261707.html
