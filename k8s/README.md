@@ -6,4 +6,6 @@
 
 4，发布部署服务
 
-5，资料库：http://www.pianshen.com/  搜索K8S
+5，资料库
+  + http://www.pianshen.com/  搜索K8S
+  + https://blog.liu-kevin.com/author/k8s/
