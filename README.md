@@ -1,5 +1,10 @@
 一、通用技能
 
+内网穿透技术
+
++ https://github.com/archlevel/frp
++ https://gofrp.org/docs/
+
 1. 公司与个人
 
 	+ 公司是盈利性组织
